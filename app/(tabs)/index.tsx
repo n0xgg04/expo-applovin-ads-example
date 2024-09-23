@@ -1,11 +1,65 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import {Image, StyleSheet, Platform, Button} from 'react-native';
 
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import {AdDisplayFailedInfo, AdInfo, AdLoadFailedInfo, AdRewardInfo, RewardedAd} from "react-native-applovin-max";
+import {useEffect, useRef} from "react";
+
+const REWARDED_AD_UNIT_ID = Platform.select({
+    android: 'UNIT_ID',
+    ios: 'UNIT_ID',
+});
+
 
 export default function HomeScreen() {
+    const MAX_EXPONENTIAL_RETRY_COUNT = 6;
+    const retryAttempt = useRef(0);
+
+    // READ AT: https://developers.applovin.com/en/max/react-native/ad-formats/rewarded-ads/
+    const initializeRewardedAds = () => {
+        RewardedAd.addAdLoadedEventListener((adInfo: AdInfo) => {
+            retryAttempt.current = 0;
+        });
+        RewardedAd.addAdLoadFailedEventListener((errorInfo: AdLoadFailedInfo) => {
+
+            retryAttempt.current += 1;
+            if (retryAttempt.current > MAX_EXPONENTIAL_RETRY_COUNT) return;
+            const retryDelay = Math.pow(2, Math.min(MAX_EXPONENTIAL_RETRY_COUNT, retryAttempt.current));
+
+            console.log('Rewarded ad failed to load - retrying in ' + retryDelay + 's');
+
+            setTimeout(() => {
+                loadRewardedAd();
+            }, retryDelay * 1000);
+        });
+        RewardedAd.addAdFailedToDisplayEventListener((adInfo: AdDisplayFailedInfo) => {
+            loadRewardedAd();
+        });
+        RewardedAd.addAdHiddenEventListener((adInfo: AdInfo) => {
+            loadRewardedAd();
+        });
+        RewardedAd.addAdReceivedRewardEventListener((adInfo: AdRewardInfo) => {
+        });
+
+        loadRewardedAd();
+    }
+
+    const loadRewardedAd = () => {
+        RewardedAd.loadAd(REWARDED_AD_UNIT_ID!);
+    }
+
+    useEffect(() => {
+        initializeRewardedAds()
+    }, []);
+
+    const openRewardedAds = async() => {
+        const isRewardedAdReady = await RewardedAd.isAdReady(REWARDED_AD_UNIT_ID!);
+        if (isRewardedAdReady) {
+            RewardedAd.showAd(REWARDED_AD_UNIT_ID!);
+        }
+    }
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -16,35 +70,15 @@ export default function HomeScreen() {
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
+        <ThemedText type="title">Applovin Expo Example</ThemedText>
         <HelloWave />
       </ThemedView>
       <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
+        <ThemedText type="subtitle">Rewarded Ads</ThemedText>
         <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
+          Click below button
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
+          <Button onPress={() => openRewardedAds()} title={"Open rewarded ads"}/>
       </ThemedView>
     </ParallaxScrollView>
   );

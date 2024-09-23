@@ -6,9 +6,13 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import {AppLovinMAX, Configuration } from 'react-native-applovin-max';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+//Initialize applovin
+AppLovinMAX.initialize("BPgoeekH1EBg4KpLShNbews_rEWK__A8ehsQDHt5lgPX63IrvonWds06_gVESdIJS4AsrLhqkcBPilLFNsJ76q").then((conf: Configuration) => {
+}).catch();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
